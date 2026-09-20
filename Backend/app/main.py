@@ -1,30 +1,37 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.database.connection import connect_to_mongo, close_mongo_connection
+from app.routes import cells, hotspots, severity, xai
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connect_to_mongo()
+    yield
+    await close_mongo_connection()
+
 
 app = FastAPI(
-    title="Traffic Risk Dashboard API",
-    version="1.0.0"
+    title="Colombo Accident Hotspot Prediction API",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-@app.get("/")
-def root():
-    return {
-        "message": "Traffic Risk Dashboard API",
-        "status": "running"
-    }
+app.include_router(cells.router)
+app.include_router(hotspots.router)
+app.include_router(severity.router)
+app.include_router(xai.router)
 
 
-@app.get("/api/health")
-def health():
-    return {
-        "status": "healthy"
-    }
+@app.get("/health", tags=["meta"])
+async def health():
+    return {"status": "ok"}
