@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import StatsRow from "./StatsRow";
+import CellDetailsPanel from "./CellDetailsPanel";
 import AccidentMap from "../map/AccidentMap";
 import Loading from "../common/Loading";
 import { useMonths } from "../../hooks/useMonths";
@@ -20,6 +21,11 @@ export default function DashboardLayout() {
       setSelectedMonth(months[0]);
     }
   }, [months, selectedMonth]);
+
+  // Clear selection when filters change so we don't show details for a hidden cell.
+  useEffect(() => {
+    setSelectedCell(null);
+  }, [selectedMonth, selectedDivision]);
 
   const { cells, loading: cellsLoading, error } = useCells(selectedMonth, selectedDivision);
 
@@ -59,18 +65,8 @@ export default function DashboardLayout() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4">
-            <div className="text-xs uppercase text-slate-500 mb-2">Selected cell</div>
-            {selectedCell ? (
-              <div>
-                <div className="font-mono text-xs text-slate-600 break-all">{selectedCell}</div>
-                <p className="mt-3 text-sm text-slate-500">
-                  Details panel (hotspot + severity + XAI) comes in the next phase.
-                </p>
-              </div>
-            ) : (
-              <div className="text-sm text-slate-500">Click a hex on the map to see prediction details.</div>
-            )}
+          <div>
+            <CellDetailsPanel h3Cell={selectedCell} yearMonth={selectedMonth} />
           </div>
         </div>
       </main>
