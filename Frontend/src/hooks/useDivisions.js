@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
 import { fetchDivisions } from "../api/cells";
+import { useAsync } from "./useAsync";
+
+const EMPTY = [];
 
 export function useDivisions() {
-  const [divisions, setDivisions] = useState([]);
-  useEffect(() => {
-    fetchDivisions().then(setDivisions).catch(() => setDivisions([]));
-  }, []);
-  return divisions;
+  const { data } = useAsync(fetchDivisions, []);
+  return data || EMPTY;
 }

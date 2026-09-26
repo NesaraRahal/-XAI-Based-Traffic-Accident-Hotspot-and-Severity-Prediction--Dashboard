@@ -1,22 +1,17 @@
-import { useEffect, useState } from "react";
 import { fetchCells } from "../api/cells";
+import { useAsync } from "./useAsync";
+
+const EMPTY = [];
 
 export function useCells(yearMonth, policeDivision) {
-  const [cells, setCells] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const { data, loading, error, fresh, reload } = useAsync(
+    fetchCellsArgs,
+    [yearMonth, policeDivision || null],
+    Boolean(yearMonth)
+  );
+  return { cells: data || EMPTY, loading, error, fresh, reload };
+}
 
-  useEffect(() => {
-    if (!yearMonth) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchCells({ yearMonth, policeDivision })
-      .then((data) => { if (!cancelled) setCells(data); })
-      .catch((err) => { if (!cancelled) setError(err); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [yearMonth, policeDivision]);
-
-  return { cells, loading, error };
+function fetchCellsArgs(yearMonth, policeDivision) {
+  return fetchCells({ yearMonth, policeDivision });
 }
