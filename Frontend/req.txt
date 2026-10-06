@@ -1,4 +1,0 @@
-# This project is a React/Vite frontend.
-# Dependencies are managed in package.json.
-# Install them with:
-# npm install
