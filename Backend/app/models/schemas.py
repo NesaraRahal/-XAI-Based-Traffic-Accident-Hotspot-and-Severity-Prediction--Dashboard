@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, List, Literal, Optional
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Location(BaseModel):
@@ -80,3 +80,38 @@ class XaiResponse(BaseModel):
     hotspot: List[ShapFeature]
     severity_predicted_class: str
     severity: List[ShapFeature]
+
+# ── Authentication ────────────────────────────────────────────────────
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=200)
+
+
+class SignupRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=200)
+    division: str = Field(min_length=1, description="Police division this officer is responsible for")
+
+
+class UserPublic(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: Literal["admin", "police"]
+    divisions: List[str]
+    status: Literal["active", "pending", "disabled"]
+    created_at: Optional[str] = None
+
+
+class AuthResponse(BaseModel):
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+    user: UserPublic
+    message: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    role: Optional[Literal["admin", "police"]] = None
+    divisions: Optional[List[str]] = None
+    status: Optional[Literal["active", "pending", "disabled"]] = None

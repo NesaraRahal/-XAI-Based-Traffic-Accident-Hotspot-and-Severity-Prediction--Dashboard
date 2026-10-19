@@ -104,6 +104,36 @@ This dashboard reads from the following collections (written by the research rep
 | `GET /api/explanation/{h3_id}?month=YYYY-MM&task=hotspot` | Local SHAP explanation for a cell/month/task |
 | `GET /api/model-runs/{task}` | Latest model performance metrics for `hotspot` or `severity` |
 
+Auth endpoints (all data endpoints above require `Authorization: Bearer <token>`):
+
+| Endpoint | Description |
+|---|---|
+| `POST /auth/signup` | Police sign-up (`name`, `email`, `password`, `division`) |
+| `POST /auth/login` | Returns an access token and the user |
+| `GET /auth/me` | The signed-in user |
+| `GET /auth/divisions` | Public list of divisions for the sign-up form |
+| `GET /auth/users` | Admin: list accounts |
+| `PATCH /auth/users/{id}` | Admin: change `status`, `role` or `divisions` |
+| `DELETE /auth/users/{id}` | Admin: delete an account |
+
+## Accounts and Access
+
+The dashboard requires sign-in. There are two roles, and the **backend** enforces them on every request (hiding things in the UI alone would not be enough):
+
+| Role | Can see | Can do |
+|---|---|---|
+| **Admin** | Every police division in the CMC area | Approve / reject sign-ups, change roles, set each officer's divisions, disable or delete accounts |
+| **Police** | Only cells in their own division(s) | View the dashboard for their jurisdiction |
+
+How it works:
+
+- **Sign-up** is for police officers only. The officer picks their police division; the account starts as *pending* until an admin approves it (set `REQUIRE_APPROVAL=false` to skip approval).
+- **Admins** are never self-registered. The first admin is created on startup from `ADMIN_EMAIL` / `ADMIN_PASSWORD`; an admin can then promote other accounts from the **Users** panel.
+- For police accounts, `/cells`, `/hotspots`, `/severity`, `/xai` and `/cells/divisions` are filtered to their divisions. Asking for another division returns `403`; a single cell outside the jurisdiction returns `404`.
+- Role, division and status changes apply immediately (the account is re-read on each request). Disabling an account signs that user out.
+- Passwords are hashed with PBKDF2-SHA256; sessions are signed JWTs (HS256) that expire after `JWT_EXPIRE_HOURS`.
+- Accounts are stored in the `dashboard_users` collection of the same database. The MongoDB user therefore needs **write** access to that collection.
+
 ## Getting Started
 
 ### Prerequisites
@@ -135,7 +165,14 @@ npm run dev
 ```
 MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/
 MONGO_DB=accident_hotspot
+CORS_ORIGINS=http://localhost:5173          # add the Vercel URL when deployed
+JWT_SECRET=<long random string>             # python -c "import secrets; print(secrets.token_urlsafe(48))"
+ADMIN_EMAIL=admin@example.com               # first admin, created on startup
+ADMIN_PASSWORD=<strong password>
+REQUIRE_APPROVAL=true
 ```
+
+Set the same variables in the Render dashboard for the deployed backend. Without `JWT_SECRET`, a random one is generated at startup and everyone is logged out whenever the server restarts.
 
 ## Status
 

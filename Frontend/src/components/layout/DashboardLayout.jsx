@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ListOrdered, PanelRight } from "lucide-react";
 import Header from "./Header";
+import UserMenu from "./UserMenu";
+import UsersPanel from "../admin/UsersPanel";
 import StatsRow from "./StatsRow";
 import CellDetailsPanel from "./CellDetailsPanel";
 import AccidentMap from "../map/AccidentMap";
@@ -12,13 +14,20 @@ import { useMonths } from "../../hooks/useMonths";
 import { useDivisions } from "../../hooks/useDivisions";
 import { useCells } from "../../hooks/useCells";
 import { useUrlState } from "../../hooks/useUrlState";
+import { useUsers } from "../../hooks/useUsers";
+import { useAuth } from "../../auth/AuthContext";
 import { API_BASE_URL } from "../../api/client";
 
 const URL_KEYS = ["month", "division", "cell"];
 
 export default function DashboardLayout() {
   const { months, loading: monthsLoading, error: monthsError, reload: reloadMonths } = useMonths();
+  // The API only returns the divisions this account may view (all of them for admins).
   const divisions = useDivisions();
+  const { isAdmin, user } = useAuth();
+  const { users, loading: usersLoading, error: usersError, reload: reloadUsers } = useUsers(isAdmin);
+  const [usersOpen, setUsersOpen] = useState(false);
+  const pendingCount = users.filter((u) => u.status === "pending").length;
   const [url, setUrl] = useUrlState(URL_KEYS);
   const [tab, setTab] = useState(url.cell ? "details" : "ranking");
   const [focusRequest, setFocusRequest] = useState(null);
@@ -26,7 +35,12 @@ export default function DashboardLayout() {
 
   // Month: URL value if valid, otherwise the first available month.
   const selectedMonth = months.includes(url.month) ? url.month : months[0] || null;
-  const selectedDivision = url.division || null;
+  // Police: ignore a division from the URL that isn't theirs (the API would refuse it).
+  // With no division picked, the API returns all of the officer's own divisions.
+  const selectedDivision = isAdmin
+    ? url.division || null
+    : (divisions.includes(url.division) ? url.division : null);
+  const lockedDivision = !isAdmin && user.divisions.length === 1 ? user.divisions[0] : null;
   const selectedCell = url.cell || null;
 
   const { cells, loading: cellsLoading, error: cellsError, fresh, reload: reloadCells } =
@@ -105,9 +119,23 @@ export default function DashboardLayout() {
         divisions={divisions}
         selectedDivision={selectedDivision}
         onDivisionChange={(d) => { setUrl("division", d); }}
-        canReset={Boolean(selectedDivision || effectiveCell)}
+        canReset={Boolean((selectedDivision && !lockedDivision) || effectiveCell)}
         onReset={() => { setUrl("division", null); clearCell(); }}
+        lockedDivision={lockedDivision}
+        allDivisionsLabel={isAdmin ? "All divisions" : "All my divisions"}
+        userSlot={<UserMenu onOpenUsers={() => { reloadUsers(); setUsersOpen(true); }} pendingCount={pendingCount} />}
       />
+
+      {usersOpen && (
+        <UsersPanel
+          users={users}
+          loading={usersLoading}
+          error={usersError}
+          reload={reloadUsers}
+          divisions={divisions}
+          onClose={() => setUsersOpen(false)}
+        />
+      )}
 
       <main className="flex-1 min-h-0 flex flex-col gap-3 p-3 lg:p-4">
         {cellsError && (
@@ -170,9 +198,14 @@ export default function DashboardLayout() {
 }
 
 function Shell({ children }) {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen flex flex-col">
-      <Header months={[]} divisions={[]} onMonthChange={() => {}} onDivisionChange={() => {}} />
+      <Header
+        months={[]} divisions={[]} onMonthChange={() => {}} onDivisionChange={() => {}}
+        lockedDivision={user?.role === "police" && user.divisions.length === 1 ? user.divisions[0] : null}
+        userSlot={<UserMenu onOpenUsers={() => {}} />}
+      />
       {children}
     </div>
   );

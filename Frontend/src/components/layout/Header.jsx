@@ -1,10 +1,14 @@
-import { ChevronLeft, ChevronRight, Flame, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Lock, RotateCcw } from "lucide-react";
 import { formatMonth } from "../../utils/format";
 
 export default function Header({
   months, selectedMonth, onMonthChange,
   divisions, selectedDivision, onDivisionChange,
   onReset, canReset,
+  // Police with a single division see it as a fixed label instead of a dropdown.
+  lockedDivision = null,
+  allDivisionsLabel = "All divisions",
+  userSlot = null,
 }) {
   const idx = months.indexOf(selectedMonth);
   const hasPrev = idx > 0;
@@ -68,19 +72,29 @@ export default function Header({
 
         <div className="flex-1 sm:flex-none">
           <label htmlFor="division-select" className="block text-[11px] font-medium text-slate-500 mb-1">
-            Police division
+            {lockedDivision ? "Your jurisdiction" : "Police division"}
           </label>
-          <select
-            id="division-select"
-            value={selectedDivision || ""}
-            onChange={(e) => onDivisionChange(e.target.value || null)}
-            className="select w-full sm:w-48"
-          >
-            <option value="">All divisions</option>
-            {divisions.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+          {lockedDivision ? (
+            <div
+              className="h-9 w-full sm:w-48 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
+              title="Police accounts can only view their own division"
+            >
+              <Lock className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+              <span className="truncate">{lockedDivision}</span>
+            </div>
+          ) : (
+            <select
+              id="division-select"
+              value={selectedDivision || ""}
+              onChange={(e) => onDivisionChange(e.target.value || null)}
+              className="select w-full sm:w-48"
+            >
+              <option value="">{allDivisionsLabel}</option>
+              {divisions.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {canReset && (
@@ -93,6 +107,8 @@ export default function Header({
             <RotateCcw className="h-3.5 w-3.5" /> Reset
           </button>
         )}
+
+        {userSlot && <div className="ml-auto md:ml-1 md:pl-3 md:border-l md:border-slate-200">{userSlot}</div>}
       </div>
     </header>
   );

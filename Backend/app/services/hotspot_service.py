@@ -20,13 +20,12 @@ def _to_summary(doc: dict) -> CellSummary:
 
 async def list_cells(
     year_month: Optional[str] = None,
-    police_division: Optional[str] = None,
+    scope: Optional[dict] = None,
 ) -> List[CellSummary]:
-    query: dict = {}
+    """`scope` is the caller's police-division filter (see app.auth.deps.division_filter)."""
+    query: dict = dict(scope or {})
     if year_month:
         query["year_month"] = year_month
-    if police_division:
-        query["location.police_division"] = police_division
 
     cursor = get_dashboard_collection().find(query, {"_id": 0})
     return [_to_summary(doc) async for doc in cursor]
@@ -34,14 +33,12 @@ async def list_cells(
 
 async def list_hotspots(
     year_month: Optional[str] = None,
-    police_division: Optional[str] = None,
+    scope: Optional[dict] = None,
     limit: Optional[int] = None,
 ) -> List[CellSummary]:
-    query: dict = {"hotspot.predicted": True}
+    query: dict = {**(scope or {}), "hotspot.predicted": True}
     if year_month:
         query["year_month"] = year_month
-    if police_division:
-        query["location.police_division"] = police_division
 
     cursor = get_dashboard_collection().find(query, {"_id": 0}).sort(
         "hotspot.probability", -1
@@ -52,8 +49,8 @@ async def list_hotspots(
     return [_to_summary(doc) async for doc in cursor]
 
 
-async def get_cell(h3_cell: str, year_month: str) -> Optional[dict]:
+async def get_cell(h3_cell: str, year_month: str, scope: Optional[dict] = None) -> Optional[dict]:
     return await get_dashboard_collection().find_one(
-        {"h3_cell": h3_cell, "year_month": year_month},
+        {**(scope or {}), "h3_cell": h3_cell, "year_month": year_month},
         {"_id": 0},
     )

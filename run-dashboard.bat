@@ -15,6 +15,13 @@ if not exist "%ROOT%Backend\.env" (
   pause
   exit /b 1
 )
+rem Install any new backend packages (e.g. PyJWT for login) if they are missing.
+"%ROOT%Backend\venv\Scripts\python.exe" -c "import jwt" 2>nul
+if errorlevel 1 (
+  echo Installing new backend packages...
+  "%ROOT%Backend\venv\Scripts\pip.exe" install -r "%ROOT%Backend\requirements.txt"
+)
+
 if not exist "%ROOT%Frontend\node_modules\.bin\vite.cmd" (
   echo Frontend dependencies missing - running npm install first...
   pushd "%ROOT%Frontend"
